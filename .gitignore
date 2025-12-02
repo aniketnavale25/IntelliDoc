@@ -1,6 +1,7 @@
 # Node
 node_modules/
 backend/node_modules/
+backend/uploads/
 frontend/node_modules/
 
 # Python
