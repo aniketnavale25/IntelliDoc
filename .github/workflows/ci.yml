@@ -1,0 +1,96 @@
+name: CI-CD Pipeline (No Tests)
+
+on:
+  push:
+    branches:
+      - "*" # Run CI for all branches including main
+
+jobs:
+  backend-check:
+    name: Validate Node Backend Builds
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Backend Dependencies
+        working-directory: backend
+        run: npm install
+
+      - name: Validate backend compiles (syntax only)
+        working-directory: backend
+        run: node -c index.js
+
+  python-check:
+    name: Validate Python RAG Service
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install Python Dependencies
+        working-directory: RAG
+        run: pip install -r requirements.txt
+
+      - name: Validate Python Syntax
+        working-directory: RAG
+        run: python -m py_compile app.py
+
+  create-pr:
+    name: Create Pull Request → main
+    needs: [backend-check, python-check]
+    if: success() && github.ref_name != 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: Create Pull Request
+        id: pr
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: main
+          branch: ${{ github.ref_name }}
+          title: "Auto PR: ${{ github.ref_name }}"
+          body: "This PR was generated automatically after CI checks passed."
+
+  auto-merge:
+    name: Auto-Merge the PR
+    needs: create-pr
+    if: success() && github.ref_name != 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Enable Auto Merge
+        uses: peter-evans/enable-pull-request-automerge@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          pull-request-number: ${{ steps.pr.outputs.pull-request-number }}
+          merge-method: squash
+
+  delete-branch:
+    name: Delete Feature Branch After Merge
+    needs: auto-merge
+    if: success() && github.ref_name != 'main'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete Branch
+        uses: dawidd6/action-delete-branch@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branches: ${{ github.ref_name }}
