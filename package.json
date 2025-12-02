@@ -1,0 +1,13 @@
+{
+    "name": "research-assistant-ai",
+    "private": true,
+    "scripts": {
+        "dev": "concurrently --names \"FRONTEND,BACKEND,RAG\" -c \"cyan,green,magenta\" \"npm run dev:frontend\" \"npm run dev:backend\" \"npm run dev:rag\"",
+        "dev:frontend": "cd frontend && npm start",
+        "dev:backend": "cd backend && node index.js",
+        "dev:rag": "cd RAG && .\\venv\\Scripts\\python.exe -m uvicorn app:app --reload --port 5000"
+    },
+    "devDependencies": {
+        "concurrently": "^8.0.0"
+    }
+}
